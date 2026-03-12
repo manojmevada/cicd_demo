@@ -23,7 +23,7 @@ jobs:
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
             cd /home/ubuntu/cicd_demo
-            git pull
+            git pull origin main
             docker-compose up -d --build
 
 
