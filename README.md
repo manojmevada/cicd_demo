@@ -80,20 +80,65 @@ Add these secrets in your GitHub repository (Settings → Secrets → Actions):
 
 ## 🖥️ OCI VM Setup
 
+You have two options to set up your OCI VM:
+
+### Option 1: Automated Setup (Recommended)
+
+1. Copy the setup script to your OCI VM:
+```bash
+scp -i your-key.pem setup-oci-vm.sh ubuntu@YOUR_VM_IP:/home/ubuntu/
+```
+
+2. SSH into your OCI VM and run the script:
+```bash
+ssh -i your-key.pem ubuntu@YOUR_VM_IP
+chmod +x setup-oci-vm.sh
+./setup-oci-vm.sh
+```
+
+3. **Logout and login again** for group changes to take effect:
+```bash
+exit
+ssh -i your-key.pem ubuntu@YOUR_VM_IP
+```
+
+4. Verify installation:
+```bash
+docker --version
+docker compose version
+docker ps
+```
+
+### Option 2: Manual Setup
+
 SSH into your OCI VM and run:
 
 ```bash
 # Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Docker
-sudo apt install docker.io -y
+# Install required packages
+sudo apt install -y ca-certificates curl gnupg lsb-release
 
-# Install Docker Compose
-sudo apt install docker-compose -y
+# Add Docker's official GPG key
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Set up Docker repository
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker Engine and Docker Compose plugin (v2)
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Add user to docker group
 sudo usermod -aG docker $USER
+
+# Enable Docker service
+sudo systemctl enable docker
+sudo systemctl start docker
 
 # Logout and login again for group changes to take effect
 exit
@@ -104,6 +149,8 @@ SSH back in and verify:
 docker --version
 docker compose version
 ```
+
+**⚠️ Important:** We use `docker compose` (v2 plugin), not the old `docker-compose` (v1 standalone).
 
 ## 🚀 Deployment
 
