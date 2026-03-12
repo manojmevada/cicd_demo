@@ -1,0 +1,71 @@
+name: Deploy Node App to OCI
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OCI_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.OCI_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to OCI VM
+        env:
+          OCI_USER: ${{ secrets.OCI_USER }}
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${OCI_USER}@${OCI_HOST} << 'EOF'
+            # Navigate to project directory or clone if doesn't exist
+            if [ ! -d "cicd_demo" ]; then
+              echo "Cloning repository for the first time..."
+              git clone https://github.com/manojmevada/cicd_demo.git
+            fi
+            
+            cd cicd_demo
+            
+            # Pull latest changes
+            echo "Pulling latest changes..."
+            git pull origin main
+            
+            # Stop existing containers
+            echo "Stopping existing containers..."
+            docker compose down || true
+            
+            # Remove old images to free space
+            echo "Cleaning up old images..."
+            docker image prune -f
+            
+            # Build and start new containers
+            echo "Building and starting containers..."
+            docker compose up -d --build
+            
+            # Show running containers
+            echo "Deployment complete! Running containers:"
+            docker compose ps
+            
+            # Show logs
+            echo "Recent logs:"
+            docker compose logs --tail=20
+          EOF
+
+      - name: Verify deployment
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+        run: |
+          echo "Waiting for application to start..."
+          sleep 10
+          echo "Testing application endpoint..."
+          curl -f http://${OCI_HOST}/ || (echo "Deployment verification failed!" && exit 1)
+          echo "✅ Deployment successful!"
