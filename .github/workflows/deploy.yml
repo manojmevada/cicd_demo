@@ -36,25 +36,33 @@ jobs:
             echo "Pulling latest changes..."
             git pull origin main
             
+            # Check if docker works without sudo
+            if docker ps > /dev/null 2>&1; then
+              DOCKER_CMD="docker"
+            else
+              echo "⚠️  Using sudo for docker commands (user not in docker group or hasn't re-logged)"
+              DOCKER_CMD="sudo docker"
+            fi
+            
             # Stop existing containers
             echo "Stopping existing containers..."
-            docker compose down || true
+            $DOCKER_CMD compose down || true
             
             # Remove old images to free space
             echo "Cleaning up old images..."
-            docker image prune -f
+            $DOCKER_CMD image prune -f
             
             # Build and start new containers
             echo "Building and starting containers..."
-            docker compose up -d --build
+            $DOCKER_CMD compose up -d --build
             
             # Show running containers
             echo "Deployment complete! Running containers:"
-            docker compose ps
+            $DOCKER_CMD compose ps
             
             # Show logs
             echo "Recent logs:"
-            docker compose logs --tail=20
+            $DOCKER_CMD compose logs --tail=20
             
       - name: Verify deployment
         run: |

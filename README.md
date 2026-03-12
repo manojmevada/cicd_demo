@@ -233,6 +233,38 @@ docker compose up -d --build
 - Check OCI Security List rules (allow ingress 0.0.0.0/0 → port 80)
 - Check Ubuntu firewall: `sudo ufw status`
 
+### Docker permission denied:
+If you see `permission denied while trying to connect to the docker API`:
+
+1. **Check if user is in docker group:**
+```bash
+groups $USER
+# Should show 'docker' in the list
+```
+
+2. **If docker is not in the list, add user to docker group:**
+```bash
+sudo usermod -aG docker $USER
+```
+
+3. **MUST logout and login for changes to take effect:**
+```bash
+exit
+# SSH back in
+ssh -i your-key.pem ubuntu@YOUR_VM_IP
+```
+
+4. **Verify docker works without sudo:**
+```bash
+docker ps
+# Should work without 'permission denied' error
+```
+
+**Temporary workaround:** The workflow automatically uses `sudo` if needed, but for best results, ensure the user is properly in the docker group and has logged out/in.
+
+### Docker Compose version warning:
+If you see "the attribute `version` is obsolete" - this is just a warning and can be ignored. The docker-compose.yml has been updated to remove the version attribute for Docker Compose v2 compatibility.
+
 ## 📝 CI/CD Workflow
 
 1. Developer pushes code to `main` branch
